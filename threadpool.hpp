@@ -7,15 +7,13 @@
 
 class ThreadPool {
 public:
-    using task_type = std::function<void()>;
-
     explicit ThreadPool(size_t n_threads = std::thread::hardware_concurrency()) {
         for (size_t i = 0; i < n_threads; ++i) {
             m_threads.emplace_back([this]{ work(); });
         }
     }
 
-    void push(task_type task) {
+    void push(std::function<void()> task) {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_tasks.push(task);
     }
@@ -40,7 +38,7 @@ private:
                 return;
             }
         
-            task_type task = std::move(m_tasks.front());
+            auto task = std::move(m_tasks.front());
             m_tasks.pop();
             lock.unlock();
             m_cond.notify_one();
@@ -48,7 +46,7 @@ private:
         }
     }
 
-    std::queue<task_type> m_tasks;
+    std::queue<std::function<void()>> m_tasks;
     std::mutex m_mutex;
     std::condition_variable m_cond;
     bool m_stop = false;
