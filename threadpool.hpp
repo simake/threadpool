@@ -16,12 +16,16 @@ public:
     }
 
     void push(std::function<void()> task) {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::unique_lock<std::mutex> lock(m_mutex);
         m_tasks.push(task);
+        lock.unlock();
+        m_cond.notify_one();
     }
 
     void join() {
+        std::unique_lock<std::mutex> lock(m_mutex);
         m_stop = true;
+        lock.unlock();
         m_cond.notify_all();
         for (std::thread& t : m_threads) {
             t.join();
@@ -36,7 +40,6 @@ private:
             
             if (m_stop && m_tasks.empty()) {
                 lock.unlock();
-                m_cond.notify_one();
                 return;
             }
         
