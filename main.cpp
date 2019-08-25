@@ -1,18 +1,13 @@
-#include "threadpool.hpp"
+#include <iostream>
 
-#include <chrono>
-#include <thread>
+#include "threadpool.hpp"
 
 int main() {
     ThreadPool pool(2);
-    Task task;
-    Task task1;
-    Task task2;
-    Task task3;
-    pool.push(task);
-    // pool.push(task1);
-    // pool.push(task2);
-    // pool.push(task3);
-    // std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+
+    for (int i = 0; i < 10; ++i) {
+        pool.push([i]{ std::cout << i << std::endl; });
+    }
+
     pool.join();
 }
