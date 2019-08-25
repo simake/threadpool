@@ -6,6 +6,7 @@
 #include <queue>
 #include <condition_variable>
 #include <functional>
+#include <future>
 
 class ThreadPool {
 public:
@@ -15,11 +16,14 @@ public:
         }
     }
 
-    void push(std::function<void()> task) {
+    std::future<int> push(std::function<int()> task) {
+        std::packaged_task<int()> packaged_task(task);
+        std::future<int> future = packaged_task.get_future();
         std::unique_lock<std::mutex> lock(m_mutex);
-        m_tasks.push(task);
+        m_tasks.push(std::move(packaged_task));
         lock.unlock();
         m_cond.notify_one();
+        return future;
     }
 
     void join() {
@@ -51,7 +55,7 @@ private:
         }
     }
 
-    std::queue<std::function<void()>> m_tasks;
+    std::queue<std::packaged_task<int()>> m_tasks;
     std::mutex m_mutex;
     std::condition_variable m_cond;
     bool m_stop = false;
