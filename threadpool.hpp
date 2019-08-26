@@ -19,8 +19,9 @@ public:
     std::future<int> push(std::function<int()> task) {
         std::packaged_task<int()> packaged_task(task);
         std::future<int> future = packaged_task.get_future();
+        std::function<void()> void_wrapper = std::bind(std::move(packaged_task));
         std::unique_lock<std::mutex> lock(m_mutex);
-        m_tasks.push(std::move(packaged_task));
+        m_tasks.push(std::move(void_wrapper));
         lock.unlock();
         m_cond.notify_one();
         return future;
@@ -55,7 +56,7 @@ private:
         }
     }
 
-    std::queue<std::packaged_task<int()>> m_tasks;
+    std::queue<std::function<void()>> m_tasks;
     std::mutex m_mutex;
     std::condition_variable m_cond;
     bool m_stop = false;
