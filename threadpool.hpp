@@ -21,12 +21,12 @@ public:
     auto push(F&& f, Args&&... args) -> std::future<decltype(f(args...))> {
         using return_type = decltype(f(args...));
         auto f_bound = std::bind(std::forward<F>(f), std::forward<Args>(args)...);
-        auto task_ptr = std::make_shared<std::packaged_task<return_type()>>(std::move(f_bound));
+        auto task_ptr = new std::packaged_task<return_type()>(std::move(f_bound));
         auto future = task_ptr->get_future();
         // std::function requires a CopyConstructible Callable, which std::packaged_task is not.
         // It's possible to solve this using move capture from C++14. But to keep C++11 compatibility,
-        // here's a workaround using std::shared_ptr, which is CopyConstructible.
-        std::function<void()> void_wrapper = [task_ptr]{ (*task_ptr)(); };
+        // here's a workaround using a pointer, which is CopyConstructible.
+        std::function<void()> void_wrapper = [task_ptr]{ (*task_ptr)(); delete task_ptr; };
         std::unique_lock<std::mutex> lock(m_mutex);
         m_tasks.push(std::move(void_wrapper));
         lock.unlock();
