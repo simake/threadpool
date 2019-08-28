@@ -50,8 +50,16 @@ public:
     }
 
     /**
+     * Blocks until all pushed tasks have been completed. Threads are kept alive.
+     */
+    void wait() {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        m_idle_cv.wait(lock, [this]{ return m_tasks.empty() && m_idle_count == m_threads.size(); });
+    }
+
+    /**
      * Blocks until all pushed tasks have been completed.
-     * Threads are joined (rendering the threadpool useless).
+     * Threads are joined (rendering the thread pool useless).
      */
     void stop() {
         std::unique_lock<std::mutex> lock(m_mutex);
@@ -59,16 +67,19 @@ public:
         lock.unlock();
         m_task_cv.notify_all();
         for (std::thread& t : m_threads) {
-            t.join();
+            if (t.joinable()) {
+                t.join();
+            }
         }
     }
 
     /**
-     * Blocks until all pushed tasks have been completed. Threads are kept alive.
+     * Threads are automatically joined upon destruction of the thread pool.
      */
-    void wait() {
-        std::unique_lock<std::mutex> lock(m_mutex);
-        m_idle_cv.wait(lock, [this]{ return m_tasks.empty() && m_idle_count == m_threads.size(); });
+    ~ThreadPool() {
+        if (!m_stop) {
+            stop();
+        }
     }
 
 private:
@@ -102,7 +113,7 @@ private:
     std::mutex m_mutex;
     std::condition_variable m_task_cv;  // Synchronizes the scheduling and acquisition of tasks
     std::condition_variable m_idle_cv;  // Used to signal the wait method when all threads are idle
-    size_t m_idle_count;
+    size_t m_idle_count = 0;
     bool m_stop = false;
     std::vector<std::thread> m_threads;
 };
