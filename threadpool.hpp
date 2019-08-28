@@ -8,6 +8,7 @@
 #include <functional>
 #include <future>
 #include <memory>
+#include <stdexcept>
 
 class ThreadPool {
 public:
@@ -18,6 +19,17 @@ public:
         }
     }
 
+    /**
+     * Pushes a new task to the processing queue and returns a future used to access the return value.
+     * The task will be invoked when there is an available worker thread and any previously
+     * pushed tasks have been or are being handled by a worker thread.
+     * 
+     * Example usage:
+     *  auto future = pool.push([](int x){ return x*2; }, 42);
+     *  std::cout << future.get() << std::endl;  // 84
+     * 
+     * Note: Reference arguments need to be wrapped with std::ref.
+     */
     template<class F, class ...Args>
     auto push(F&& f, Args&&... args) -> std::future<decltype(f(args...))> {
         using return_type = decltype(f(args...));
@@ -25,17 +37,23 @@ public:
         auto task_ptr = std::make_shared<std::packaged_task<return_type()>>(std::move(f_bound));
         auto future = task_ptr->get_future();
         // std::function requires a CopyConstructible Callable, which std::packaged_task is not.
-        // It's possible to solve this using move capture from C++14. But to keep C++11 compatibility,
-        // here's a workaround using std::shared_ptr, which is CopyConstructible.
+        // Here's a workaround using std::shared_ptr, which is CopyConstructible.
         std::function<void()> void_wrapper = [task_ptr]{ (*task_ptr)(); };
         std::unique_lock<std::mutex> lock(m_mutex);
+        if (m_stop) {
+            throw std::runtime_error("Pushing new task to stopped ThreadPool");
+        }
         m_tasks.push(std::move(void_wrapper));
         lock.unlock();
         m_task_cv.notify_one();
         return future;
     }
 
-    void join() {
+    /**
+     * Blocks until all pushed tasks have been completed.
+     * Threads are joined (rendering the threadpool useless).
+     */
+    void stop() {
         std::unique_lock<std::mutex> lock(m_mutex);
         m_stop = true;
         lock.unlock();
@@ -54,6 +72,9 @@ public:
     }
 
 private:
+    /**
+     * The worker thread loop. Pops and invokes tasks from the processing queue until signaled to stop.
+     */
     void work() {
         while (true) {
             std::unique_lock<std::mutex> lock(m_mutex);

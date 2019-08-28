@@ -33,5 +33,5 @@ int main() {
         std::cout << f.get() << std::endl;
     }
 
-    pool.join();
+    pool.stop();
 }
