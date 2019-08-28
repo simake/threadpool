@@ -51,7 +51,6 @@ public:
     void wait() {
         std::unique_lock<std::mutex> lock(m_mutex);
         m_idle_cv.wait(lock, [this]{ return m_tasks.empty() && m_idle_count == m_threads.size(); });
-        std::cout << "wait(): " << m_idle_count << " " << m_threads.size() << std::endl;
     }
 
 private:
@@ -60,7 +59,6 @@ private:
             std::unique_lock<std::mutex> lock(m_mutex);
             
             if (++m_idle_count == m_threads.size()) {
-                std::cout << "work(): " << m_idle_count << " " << m_threads.size() << std::endl;
                 m_idle_cv.notify_one();
             }
             m_task_cv.wait(lock, [this]{ return !m_tasks.empty() || m_stop; });
