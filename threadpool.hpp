@@ -12,6 +12,7 @@
 class ThreadPool {
 public:
     explicit ThreadPool(size_t n_threads = std::thread::hardware_concurrency()) {
+        std::lock_guard<std::mutex> lock(m_mutex);
         for (size_t i = 0; i < n_threads; ++i) {
             m_threads.emplace_back([this]{ work(); });
         }
@@ -30,7 +31,7 @@ public:
         std::unique_lock<std::mutex> lock(m_mutex);
         m_tasks.push(std::move(void_wrapper));
         lock.unlock();
-        m_cond.notify_one();
+        m_task_cv.notify_one();
         return future;
     }
 
@@ -38,18 +39,33 @@ public:
         std::unique_lock<std::mutex> lock(m_mutex);
         m_stop = true;
         lock.unlock();
-        m_cond.notify_all();
+        m_task_cv.notify_all();
         for (std::thread& t : m_threads) {
             t.join();
         }
+    }
+
+    /**
+     * Blocks until all pushed tasks have been completed. Threads are kept alive.
+     */
+    void wait() {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        m_idle_cv.wait(lock, [this]{ return m_tasks.empty() && m_idle_count == m_threads.size(); });
+        std::cout << "wait(): " << m_idle_count << " " << m_threads.size() << std::endl;
     }
 
 private:
     void work() {
         while (true) {
             std::unique_lock<std::mutex> lock(m_mutex);
-            m_cond.wait(lock, [this]{ return !m_tasks.empty() || m_stop; });
             
+            if (++m_idle_count == m_threads.size()) {
+                std::cout << "work(): " << m_idle_count << " " << m_threads.size() << std::endl;
+                m_idle_cv.notify_one();
+            }
+            m_task_cv.wait(lock, [this]{ return !m_tasks.empty() || m_stop; });
+            --m_idle_count;
+
             if (m_stop && m_tasks.empty()) {
                 lock.unlock();
                 return;
@@ -58,14 +74,16 @@ private:
             auto task = std::move(m_tasks.front());
             m_tasks.pop();
             lock.unlock();
-            m_cond.notify_one();
+            m_task_cv.notify_one();
             task();
         }
     }
 
     std::queue<std::function<void()>> m_tasks;
     std::mutex m_mutex;
-    std::condition_variable m_cond;
+    std::condition_variable m_task_cv;  // Synchronizes the scheduling and acquisition of tasks
+    std::condition_variable m_idle_cv;  // Used to signal the wait method when all threads are idle
+    size_t m_idle_count;
     bool m_stop = false;
     std::vector<std::thread> m_threads;
 };
