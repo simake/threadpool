@@ -9,18 +9,26 @@
 #include <future>
 #include <memory>
 #include <stdexcept>
+#include <algorithm>
 
 class ThreadPool {
 public:
     /**
      * Creates a thread pool with a set number of worker threads.
+     * Defaults to the number of hardware threads on the machine (or 1 if it's not computable).
      * 
      * Note: Throws std::system_error if the threads could not be started.
      */
-    explicit ThreadPool(size_t num_threads = std::thread::hardware_concurrency()) {
+    explicit ThreadPool(size_t num_threads = std::max(std::thread::hardware_concurrency(), 1u)) {
+        m_threads.reserve(num_threads);
         std::lock_guard<std::mutex> lock(m_mutex);
-        for (size_t i = 0; i < num_threads; ++i) {
-            m_threads.emplace_back([this]{ work(); });
+        try {
+            for (size_t i = 0; i < num_threads; ++i) {
+                m_threads.emplace_back([this]{ work(); });
+            }
+        } catch (std::system_error& e) {
+            stop();
+            throw;
         }
     }
 
