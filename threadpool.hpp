@@ -15,7 +15,7 @@ class ThreadPool {
 public:
     /**
      * Creates a thread pool with a set number of worker threads.
-     * Defaults to the number of hardware threads on the machine (or 1 if it's not computable).
+     * Defaults to the number of threads supported by the system (or 1 if it's not computable).
      * 
      * Note: Throws std::system_error if the threads could not be started.
      */
