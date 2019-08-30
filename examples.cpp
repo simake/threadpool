@@ -74,7 +74,7 @@ void example_baking() {
     // Finally bake them
     pool.wait();
     pool.push(bake_pastries);
-    pool.stop();
+    pool.wait();
     printf("Done!\n");
     // disclaimer: I'm no cook
 }

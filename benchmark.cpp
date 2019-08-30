@@ -33,7 +33,6 @@ int main() {
         for (int j = 0; j < num_tasks; ++j) {
             pool.push(task);
         }
-        pool.stop();
     });
     std::cout << "ThreadPool (avg):\t\t\t" << avg << " μs" << std::endl;
 

@@ -71,6 +71,14 @@ public:
     }
 
     /**
+     * Threads are automatically joined upon destruction of the thread pool.
+     */
+    ~ThreadPool() {
+        stop();
+    }
+
+private:
+    /**
      * Blocks until all pushed tasks have been completed.
      * Threads are joined (rendering the thread pool useless).
      */
@@ -86,16 +94,6 @@ public:
         }
     }
 
-    /**
-     * Threads are automatically joined upon destruction of the thread pool.
-     */
-    ~ThreadPool() {
-        if (!m_stop) {
-            stop();
-        }
-    }
-
-private:
     /**
      * The worker thread loop. Pops and invokes tasks from the processing queue until signaled to stop.
      */
