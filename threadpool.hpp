@@ -20,6 +20,9 @@ public:
      * Note: Throws std::system_error if the threads could not be started.
      */
     explicit ThreadPool(size_t num_threads = std::max(std::thread::hardware_concurrency(), 1u)) {
+        if (num_threads == 0) {
+            throw std::invalid_argument("Creating ThreadPool with 0 threads");
+        }
         m_threads.reserve(num_threads);
         std::lock_guard<std::mutex> lock(m_mutex);
         try {
