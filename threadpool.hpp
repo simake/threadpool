@@ -82,8 +82,8 @@ public:
 
 private:
     /**
-     * Blocks until all pushed tasks have been completed.
-     * Threads are joined (rendering the thread pool useless).
+     * Initiates thread pool shutdown. Worker threads are joined when
+     * they are done processing the remaining tasks in the queue.
      */
     void stop() {
         std::unique_lock<std::mutex> lock(m_mutex);
