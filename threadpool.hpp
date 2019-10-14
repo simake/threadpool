@@ -74,6 +74,23 @@ public:
     }
 
     /**
+     * Discards all queued tasks and returns the amount.
+     * Tasks that are already being handled will run to completion.
+     * 
+     * Note: Calling future.get() on the corresponding future of one of the discarded tasks
+     * will throw an std::future_error exception.
+     */
+    size_t discard() {
+        size_t count = 0;
+        std::lock_guard<std::mutex> lock(m_mutex);
+        while (!m_tasks.empty()) {
+            m_tasks.pop();
+            ++count;
+        }
+        return count;
+    }
+
+    /**
      * Threads are automatically joined upon destruction of the thread pool.
      */
     ~ThreadPool() {
