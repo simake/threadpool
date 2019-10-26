@@ -9,3 +9,8 @@
 * lever packaged_task tills future.get()? blockar det tråden, eller kan den köra vidare utan future.get()?
     * testa, men tror inte att det blockar. future och promise har shared state, så även om promise (i packaged_task) försvinner kommer future att hålla resultatet levande.
 
+readme:
+* what is this? why?
+* relies heavily upon threading and synchronization classes from the C++11 Standard Library (but I have deliberately avoided features that are deprecated in later versions)
+* create basic example(s) in README.md
+
