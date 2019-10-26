@@ -47,7 +47,7 @@ void sleep(unsigned int ms) {
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 
-void example_baking() {
+void example_wait_sync() {
     // Here's a baking recipe which we'll try to make efficient by including the whole family
     auto add_flour = []{ sleep(200); printf("*puff*\n"); };
     auto add_eggs = []{ sleep(300); printf("*crack*\n"); };
@@ -55,43 +55,52 @@ void example_baking() {
     auto stir_ingredients = []{ printf("*stir stir stir*\n"); sleep(600); };
     auto shape_batter = []{ printf("*shaping some batter into a pastry*\n"); sleep(500); };  // x10
     auto bake_pastries = []{ printf("*baking pastries in oven*\n"); sleep(600); };
+
     // Baking is a family acitiviy!
     const int family_size = 5;  // Yes, const. We'll be careful.
     ThreadPool pool(family_size);
+
     // Adding the ingredients can be done in parallel
     pool.push(add_flour);
     pool.push(add_eggs);
     pool.push(add_milk);
-    // But we have to finish adding the ingredients before stirring (suspend your disbelief)
+    // but we have to finish adding the ingredients before stirring (suspend your disbelief)
     pool.wait();
+
     pool.push(stir_ingredients);
-    // Once done stirring the whole family will be at hard work making pastries
     pool.wait();
-    const int number_of_pastries = 10;
-    for (int i = 0; i < number_of_pastries; ++i) {
+
+    // Once done stirring the whole family will be hard at work making pastries
+    const int pastry_count = 10;
+    for (int i = 0; i < pastry_count; ++i) {
         pool.push(shape_batter);
     }
-    // Finally bake them
     pool.wait();
+
+    // Finally bake them
     pool.push(bake_pastries);
     pool.wait();
-    printf("Done!\n");
+
     // disclaimer: I'm no cook
+    printf("Done!\n");
 }
 
 void example_future_sync() {
-    // synchronization between tasks with dependencies can also be accomplished using futures
+    // TODO: synchronization between tasks with dependencies can also be accomplished using futures
 }
 
 void example_inception() {
-    // meet threadpool-ception
+    // TODO: meet threadpool-ception
 }
 
 int main() {
-    printf("----------- example_hello -----------\n");
+    printf("--------- example_hello ---------------\n");
     example_hello();
-    printf("----------- example_future -----------\n");
+    printf("--------- example_future --------------\n");
     example_future();
-    printf("----------- example_exception -----------\n");
+    printf("--------- example_exception -----------\n");
     example_exception();
+    printf("--------- example_wait_sync -----------\n");
+    example_wait_sync();
 }
+
