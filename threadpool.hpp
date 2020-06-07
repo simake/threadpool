@@ -66,14 +66,6 @@ public:
     }
 
     /**
-     * Blocks until all pushed tasks have been completed. Threads are kept alive.
-     */
-    void wait() {
-        std::unique_lock<std::mutex> lock(m_mutex);
-        m_idle_cv.wait(lock, [this]{ return m_tasks.empty() && m_idle_count == m_threads.size(); });
-    }
-
-    /**
      * Discards all queued tasks and returns the amount.
      * Tasks that are already being handled will run to completion.
      * 
@@ -91,19 +83,25 @@ public:
     }
 
     /**
-     * Threads are automatically joined upon destruction of the thread pool.
+     * Blocks until all pushed tasks have been completed. Threads are kept alive.
      */
-    ~ThreadPool() {
-        stop();
+    void wait() {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        if (m_stop) {
+            throw std::runtime_error("Waiting for stopped ThreadPool");
+        }
+        m_idle_cv.wait(lock, [this]{ return m_tasks.empty() && m_idle_count == m_threads.size(); });
     }
 
-private:
     /**
      * Initiates thread pool shutdown. Worker threads are joined when
      * they are done processing the remaining tasks in the queue.
      */
     void stop() {
         std::unique_lock<std::mutex> lock(m_mutex);
+        if (m_stop) {
+            throw std::runtime_error("ThreadPool has already been stopped");
+        }
         m_stop = true;
         lock.unlock();
         m_task_cv.notify_all();
@@ -115,12 +113,23 @@ private:
     }
 
     /**
+     * Threads are automatically joined upon destruction of the thread pool
+     * if not done explicitly by calling the stop method.
+     */
+    ~ThreadPool() {
+        if (!m_stop) {
+            stop();
+        }
+    }
+
+private:
+    /**
      * The worker thread loop. Pops and invokes tasks from the processing queue until signaled to stop.
      */
     void work() {
         while (true) {
             std::unique_lock<std::mutex> lock(m_mutex);
-            
+
             if (++m_idle_count == m_threads.size()) {
                 m_idle_cv.notify_one();
             }
@@ -131,7 +140,7 @@ private:
                 lock.unlock();
                 return;
             }
-        
+
             auto task = std::move(m_tasks.front());
             m_tasks.pop();
             lock.unlock();
