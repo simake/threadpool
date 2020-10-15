@@ -32,7 +32,7 @@ std::cout << future.get() << std::endl;  // 84
 Discards all queued tasks and returns the amount. Tasks that are already being handled will run to completion. Note: Calling `future.get()` on the corresponding future of one of the discarded tasks will throw an `std::future_error` exception.
 
 ```cpp
-size_t n_discarded = pool.discard()
+size_t n_discarded = pool.discard();
 ```
 
 **wait**
@@ -41,9 +41,9 @@ Blocks until all pushed tasks have been completed. Threads are kept alive. Tip: 
 
 ```cpp
 // bar depends on foo, so let's make sure foo has been completed before starting bar
-pool.push(foo)
-pool.wait()
-pool.push(bar)
+pool.push(foo);
+pool.wait();
+pool.push(bar);
 ```
 
 
@@ -52,7 +52,7 @@ pool.push(bar)
 Initiates thread pool shutdown. Worker threads are joined when they are done processing the remaining tasks in the queue. This will be called automatically upon destruction of the thread pool if not done explicitly.
 
 ```cpp
-pool.stop()
+pool.stop();
 ```
 
 ### Installation
